@@ -13,7 +13,7 @@
   <!-- Fonts: preconnect + link (non-render-blocking with display=swap) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap">
 
   <style>
     *, *::before, *::after {
@@ -23,255 +23,176 @@
     }
 
     :root {
-      --bg: #0a0a0a;
-      --fg: #e8e8e8;
-      --accent: #00ff88;
-      --accent-dim: #00cc6a;
-      --peak: #ff6b6b;
-      --peak-dim: #cc5555;
-      --muted: #666;
-      --card-bg: #111;
-      --border: #222;
+      /* Retro Palette */
+      --bg-light: #eedfcc;  /* Top canvas background */
+      --bg-dark: #3d3129;   /* Bottom card background */
+      
+      --text-orange: #eb9e78; /* Accent for countdown */
+      --text-muted: #998a7e;  /* Small text */
+      --text-white: #f5f0eb;  /* Headings / Light text */
+      --text-dark: #3d3129;   /* Dark text on light bg (if needed) */
+
+      --line-color: rgba(123, 92, 70, 0.4); /* Speedlines default */
+      --line-fast: rgba(0, 150, 80, 0.4);   /* Green tint for boost */
+      --line-slow: rgba(200, 50, 50, 0.4);  /* Red tint for peak */
     }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--fg);
+      background: var(--bg-light);
       min-height: 100vh;
       min-height: 100dvh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
+      padding: 2rem;
       overflow-x: hidden;
     }
 
-    /* Subtle scanline overlay */
-    body::after {
-      content: '';
-      position: fixed;
+    /* Outer Wrapper for the split design */
+    .hero-card {
+      position: relative;
+      width: 100%;
+      max-width: 1000px;
+      height: 600px;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      border: 1px solid rgba(123, 92, 70, 0.2);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Half - Canvas Container */
+    .top-section {
+      flex: 1;
+      position: relative;
+      background: var(--bg-light);
+    }
+
+    #traffic-canvas {
+      position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
       pointer-events: none;
-      background: repeating-linear-gradient(
-        0deg,
-        transparent,
-        transparent 2px,
-        rgba(0, 0, 0, 0.03) 2px,
-        rgba(0, 0, 0, 0.03) 4px
-      );
-      z-index: 1000;
+      z-index: 1;
     }
 
-    main {
-      text-align: center;
-      max-width: 700px;
-      width: 100%;
+    /* Bottom Half - Info Container */
+    .bottom-section {
+      background: var(--bg-dark);
+      padding: 2.5rem 3rem;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(0,0,0,0.2);
+    }
+
+    .info-content {
+      flex: 1;
     }
 
     h1 {
       font-family: 'Space Mono', monospace;
-      font-size: 1.1rem;
-      font-weight: 400;
-      color: var(--muted);
-      margin-bottom: 2rem;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 0.4rem 1.2rem;
-      border-radius: 999px;
-      font-family: 'Space Mono', monospace;
       font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.15em;
       text-transform: uppercase;
       margin-bottom: 1.5rem;
-      border: 1px solid transparent;
-    }
-
-    .status-badge[data-state="boosted"] {
-      background: rgba(0, 255, 136, 0.1);
-      color: var(--accent);
-      border-color: rgba(0, 255, 136, 0.3);
-    }
-
-    .status-badge[data-state="peak"] {
-      background: rgba(255, 107, 107, 0.1);
-      color: var(--peak);
-      border-color: rgba(255, 107, 107, 0.3);
-    }
-
-    .status-badge[data-state="expired"],
-    .status-badge[data-state="not-started"] {
-      background: rgba(102, 102, 102, 0.1);
-      color: var(--muted);
-      border-color: rgba(102, 102, 102, 0.3);
     }
 
     .hero-text {
-      font-family: 'Space Mono', monospace;
-      font-weight: 700;
-      font-size: clamp(1.6rem, 5vw, 3rem);
-      line-height: 1.3;
-      margin-bottom: 0.5rem;
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      color: var(--text-white);
+      line-height: 1.1;
+      margin-bottom: 0.8rem;
     }
-
-    .hero-text[data-state="boosted"] { color: var(--accent); }
-    .hero-text[data-state="peak"]    { color: var(--peak); }
-    .hero-text[data-state="expired"],
-    .hero-text[data-state="not-started"] { color: var(--muted); }
 
     .countdown {
-      font-family: 'Space Mono', monospace;
-      font-weight: 700;
-      font-size: clamp(2.5rem, 8vw, 4.8rem);
-      letter-spacing: 0.02em;
-      margin: 0.5rem 0 1.5rem;
-      min-height: 1.2em; /* prevent layout shift when empty */
-    }
-
-    .countdown[data-state="boosted"] {
-      color: var(--accent);
-      text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
-    }
-
-    .countdown[data-state="peak"] {
-      color: var(--peak);
-      text-shadow: 0 0 30px rgba(255, 107, 107, 0.3);
-    }
-
-    .countdown[data-state="expired"],
-    .countdown[data-state="not-started"] {
-      color: var(--muted);
+      color: var(--text-orange);
+      font-weight: 400;
     }
 
     .sub-text {
       font-size: 0.95rem;
-      color: var(--muted);
+      color: var(--text-muted);
       line-height: 1.6;
-      max-width: 500px;
-      margin: 0 auto 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .sub-text .tz {
-      font-family: 'Space Mono', monospace;
-      color: var(--fg);
-      font-size: 0.85rem;
       opacity: 0.7;
-      display: block;
-      margin-top: 0.25rem;
     }
 
-    /* Schedule card */
-    .schedule-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin: 0 auto 2rem;
-      max-width: 460px;
-      text-align: left;
+    /* Retro Pixel Crab/Alien Character */
+    .pixel-character {
+      width: 120px;
+      height: 100px;
+      position: relative;
+      margin-left: 2rem;
+      /* Simple CSS block construction */
+      display: grid;
+      grid-template-columns: repeat(11, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      gap: 0px;
+      flex-shrink: 0;
     }
 
-    .schedule-card h2 {
-      font-family: 'Space Mono', monospace;
+    .pixel {
+      background: var(--text-orange);
+    }
+    .pixel.empty {
+      background: transparent;
+    }
+    .pixel.eye {
+      background: var(--bg-dark); /* cut out */
+    }
+
+    /* Footer / Bottom Links */
+    .card-footer {
+      position: absolute;
+      bottom: 1.5rem;
+      left: 3rem;
       font-size: 0.8rem;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      color: var(--muted);
-      margin-bottom: 1rem;
-      font-weight: 400;
+      color: var(--text-muted);
     }
 
-    .schedule-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0.5rem 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 0.9rem;
-      gap: 1rem;
+    .card-footer a {
+      color: var(--text-orange);
+      text-decoration: none;
+      transition: opacity 0.2s;
     }
 
-    .schedule-row:last-child {
-      border-bottom: none;
+    .card-footer a:hover {
+      opacity: 0.8;
     }
 
-    .schedule-row .label {
-      color: var(--fg);
-    }
-
-    .schedule-row .value {
-      font-family: 'Space Mono', monospace;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
-    .schedule-row .value.green { color: var(--accent); }
-    .schedule-row .value.red   { color: var(--peak); }
-
-    /* Progress bar */
+    /* Progress bar - Integrated horizontally */
     .progress-wrap {
-      max-width: 460px;
-      margin: 0 auto 2.5rem;
-    }
-
-    .progress-labels {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.75rem;
-      color: var(--muted);
-      margin-bottom: 0.4rem;
-      font-family: 'Space Mono', monospace;
+      margin-top: 1.5rem;
+      max-width: 300px;
     }
 
     .progress-bar-bg {
       width: 100%;
-      height: 6px;
-      background: var(--border);
-      border-radius: 3px;
+      height: 2px;
+      background: rgba(255,255,255,0.1);
       overflow: hidden;
     }
 
     .progress-fill {
       height: 100%;
-      border-radius: 3px;
+      background: var(--text-orange);
       transition: width 1s linear;
       width: 0%;
-    }
-
-    .progress-fill[data-state="boosted"] {
-      background: var(--accent);
-      box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
-    }
-
-    .progress-fill[data-state="peak"] {
-      background: var(--peak);
-      box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
-    }
-
-    .progress-fill[data-state="expired"] {
-      background: var(--muted);
-    }
-
-    /* Footer */
-    footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid var(--border);
-      text-align: center;
-      font-size: 0.8rem;
-      color: var(--muted);
-      line-height: 1.8;
-      width: 100%;
-      max-width: 700px;
     }
 
     footer a {
@@ -315,75 +236,110 @@
     }
 
     /* Responsive tweaks */
-    @media (max-width: 480px) {
-      body {
-        padding: 1rem;
+    @media (max-width: 768px) {
+      .hero-card {
+        height: auto;
+        min-height: 500px;
       }
-      .schedule-card {
-        padding: 1rem;
+      .bottom-section {
+        flex-direction: column;
+        padding: 2rem;
+        align-items: flex-start;
       }
-      .schedule-row {
-        font-size: 0.8rem;
-        flex-wrap: wrap;
+      .pixel-character {
+        margin-left: 0;
+        margin-top: 2rem;
       }
-      footer {
-        font-size: 0.75rem;
+      .card-footer {
+        position: relative;
+        bottom: 0;
+        left: 0;
+        margin-top: 2rem;
       }
     }
   </style>
 </head>
 <body>
-  <canvas id="confetti" aria-hidden="true"></canvas>
-
-  <main role="main">
-    <h1>Claude Throttle Tracker</h1>
-
-    <div id="status-badge" class="status-badge" role="status" aria-live="polite"></div>
-
-    <p id="hero" class="hero-text" aria-live="polite"></p>
-
-    <p id="countdown" class="countdown" aria-live="off" aria-atomic="true"></p>
-
-    <p id="sub" class="sub-text"></p>
-
-    <div class="progress-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Time remaining in current period" id="progress-section">
-      <div class="progress-labels">
-        <span id="prog-left"></span>
-        <span id="prog-right"></span>
-      </div>
-      <div class="progress-bar-bg">
-        <div id="prog-fill" class="progress-fill"></div>
-      </div>
+  <div class="hero-card">
+    <div class="top-section">
+      <canvas id="traffic-canvas" aria-hidden="true"></canvas>
+      <canvas id="confetti" aria-hidden="true"></canvas>
     </div>
 
-    <div class="schedule-card" aria-label="Boost schedule">
-      <h2>Schedule (Pacific Time)</h2>
-      <div class="schedule-row">
-        <span class="label">Weekdays 5 AM – 11 AM PT</span>
-        <span class="value red">Peak (1×)</span>
+    <div class="bottom-section" role="main">
+      <div class="info-content">
+        <h1>Claude Throttle</h1>
+        
+        <p class="hero-text" aria-live="polite">
+          <span id="hero"></span> 
+          <span id="countdown" class="countdown" aria-live="off" aria-atomic="true"></span>
+        </p>
+
+        <p id="sub" class="sub-text"></p>
+
+        <div class="progress-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progress-section">
+          <div class="progress-bar-bg">
+            <div id="prog-fill" class="progress-fill"></div>
+          </div>
+        </div>
       </div>
-      <div class="schedule-row">
-        <span class="label">Weekdays 11 AM – 5 AM PT</span>
-        <span class="value green">2× Boost</span>
+
+      <!-- CSS Pixel Art -->
+      <div class="pixel-character">
+        <!-- Row 1 -->
+        <div class="pixel empty"></div><div class="pixel empty"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel empty"></div><div class="pixel empty"></div>
+        
+        <!-- Row 2 -->
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel empty"></div>
+        
+        <!-- Row 3 -->
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel eye"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel eye"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div>
+
+        <!-- Row 4 -->
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div>
+
+        <!-- Row 5 -->
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel"></div><div class="pixel"></div>
+        <div class="pixel"></div><div class="pixel empty"></div>
+
+        <!-- Row 6 -->
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div><div class="pixel"></div>
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div>
+
+        <!-- Row 7 -->
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div><div class="pixel"></div>
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div>
+
+        <!-- Row 8 -->
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div><div class="pixel empty"></div>
+        <div class="pixel empty"></div><div class="pixel"></div><div class="pixel empty"></div>
+        <div class="pixel"></div><div class="pixel empty"></div>
       </div>
-      <div class="schedule-row">
-        <span class="label">Weekends (all day)</span>
-        <span class="value green">2× Boost</span>
-      </div>
-      <div class="schedule-row">
-        <span class="label">Boost period</span>
-        <span class="value">Mar 14 – Mar 28, 2026</span>
+
+      <div class="card-footer">
+        Built with &#10084;&#65039; by MuraliKP | <a href="#">getOrcas.com</a>
       </div>
     </div>
-  </main>
-
-  <footer>
-    Built with &#10084;&#65039; by Orcas | Follow
-    <a href="https://x.com/p_naix" target="_blank" rel="noopener noreferrer">@p_naix</a>
-    <a href="https://x.com/get_orcas" target="_blank" rel="noopener noreferrer">@get_orcas</a>
-    on &#120143; |
-    <a href="https://getorcas.com" target="_blank" rel="noopener noreferrer">getorcas.com</a>
-  </footer>
+  </div>
 
   <script>
     'use strict';
@@ -395,7 +351,7 @@
     var PEAK_START_HOUR = 5;   // 5:00 AM PT
     var PEAK_END_HOUR   = 11;  // 11:00 AM PT (peak is 5:00–10:59:59.999)
 
-    // Boost period: March 14, 2026 00:00:00 PT → March 28, 2026 23:59:59.999 PT
+    // Boost period: March 13, 2026 00:00:00 PT → March 27, 2026 23:59:59.999 PT
     // Computed dynamically via ptToUTC (no hardcoded UTC offset).
     // We defer initialization until ptToUTC is defined.
     var BOOST_START;
@@ -490,10 +446,10 @@
     // ─────────────────────────────────────────────────────────────────────
     // Initialize boost period boundaries (uses ptToUTC, so must come after)
     // ─────────────────────────────────────────────────────────────────────
-    BOOST_START = ptToUTC(2026, 3, 14, 0, 0, 0);     // Mar 14 00:00:00 PT
-    BOOST_END   = ptToUTC(2026, 3, 29, 0, 0, 0);     // Mar 29 00:00:00 PT = Mar 28 23:59:59.999+1ms
+    BOOST_START = ptToUTC(2026, 3, 13, 0, 0, 0);     // Mar 13 00:00:00 PT
+    BOOST_END   = ptToUTC(2026, 3, 28, 0, 0, 0);     // Mar 28 00:00:00 PT = Mar 27 23:59:59.999+1ms
 
-    // We actually want "end of March 28", so subtract 1ms
+    // We actually want "end of March 27", so subtract 1ms
     BOOST_END = new Date(BOOST_END.getTime() - 1);
 
     // ─────────────────────────────────────────────────────────────────────
@@ -668,15 +624,12 @@
     // ─────────────────────────────────────────────────────────────────────
     // DOM — all references cached, all writes via textContent (no innerHTML)
     // ─────────────────────────────────────────────────────────────────────
-    var $badge    = document.getElementById('status-badge');
-    var $hero     = document.getElementById('hero');
+    var $hero      = document.getElementById('hero');
     var $countdown = document.getElementById('countdown');
-    var $sub      = document.getElementById('sub');
-    var $progWrap = document.getElementById('progress-section');
-    var $progFill = document.getElementById('prog-fill');
-    var $progLeft = document.getElementById('prog-left');
-    var $progRight = document.getElementById('prog-right');
-    var $canvas   = document.getElementById('confetti');
+    var $sub       = document.getElementById('sub');
+    var $progWrap  = document.getElementById('progress-section');
+    var $progFill  = document.getElementById('prog-fill');
+    var $canvas    = document.getElementById('confetti');
 
     var userTZ = getUserTimezone();
 
@@ -693,7 +646,7 @@
 
     // Apply data-state attribute to multiple elements
     function setStateAttr(state) {
-      var els = [$badge, $hero, $countdown, $progFill];
+      var els = [$hero, $countdown, $progFill];
       for (var i = 0; i < els.length; i++) {
         els[i].setAttribute('data-state', state);
       }
@@ -712,48 +665,32 @@
       setStateAttr(state);
 
       if (state === 'not-started') {
-        $badge.textContent = 'COMING SOON';
-        $hero.textContent = 'The 2× boost starts in';
+        $hero.textContent = '2X maxxing in';
         $countdown.textContent = formatCountdown(msUntilChange);
-        $countdown.classList.remove('pulse');
-        setSubText('2× usage limits begin March 14, 2026 \u00b7 ');
-        $progLeft.textContent = '';
-        $progRight.textContent = 'Starting soon';
+        setSubText('Your usage limits begin double outside peak hours \u00b7 ');
         $progFill.style.width = '0%';
         $progWrap.setAttribute('aria-valuenow', '0');
         return;
       }
 
       if (state === 'expired') {
-        $badge.textContent = 'ENDED';
-        $hero.textContent = 'The 2\u00d7 boost period has ended';
+        $hero.textContent = '2X period concluded';
         $countdown.textContent = '';
-        $countdown.classList.remove('pulse');
-        setSubText('The promotional 2\u00d7 usage limits ended on March 28, 2026. ');
+        setSubText('The promotional 2\u00d7 usage limits ended on March 27, 2026. ');
         $progFill.style.width = '100%';
-        $progLeft.textContent = '';
-        $progRight.textContent = 'Ended';
         $progWrap.setAttribute('aria-valuenow', '100');
         return;
       }
 
       if (state === 'boosted') {
-        $badge.textContent = '2\u00d7 ACTIVE';
-        $hero.textContent = '2\u00d7 maxxing for';
+        $hero.textContent = '2X maxxing for';
         $countdown.textContent = formatCountdown(msUntilChange);
-        $countdown.classList.add('pulse');
         setSubText('Your usage limits are doubled right now \u00b7 ');
-        $progLeft.textContent = '2\u00d7 ACTIVE';
-        $progRight.textContent = 'Next peak';
       } else {
         // peak
-        $badge.textContent = 'PEAK HOURS';
-        $hero.textContent = 'Peak throttling \u2014 2\u00d7 resumes in';
+        $hero.textContent = 'Peak limits ending in';
         $countdown.textContent = formatCountdown(msUntilChange);
-        $countdown.classList.remove('pulse');
         setSubText('Standard usage limits during peak hours \u00b7 ');
-        $progLeft.textContent = 'Peak hours';
-        $progRight.textContent = '2\u00d7 resumes';
       }
 
       // Progress bar
@@ -768,6 +705,10 @@
       if (state === 'boosted' && prevState !== 'boosted') {
         launchConfetti();
       }
+
+      // Update background animation
+      updateTrafficState(state);
+
       prevState = state;
     }
 
@@ -851,6 +792,96 @@
     }
 
     // ─────────────────────────────────────────────────────────────────────
+    // MINDBLOWING TRAFFIC ANIMATION (Retro Horizontal Speedlines)
+    // ─────────────────────────────────────────────────────────────────────
+    var tCanvas = document.getElementById('traffic-canvas');
+    var tCtx = tCanvas.getContext('2d', { alpha: true }); // Need alpha for background compositing
+    var tLines = [];
+    var tRafId = null;
+
+    // State uniforms
+    var currentSpeedMultiplier = 1.0;
+    var targetSpeedMultiplier = 1.0;
+
+    function initTraffic() {
+      // Re-measure canvas based on parent container logic
+      var topSection = document.querySelector('.top-section');
+      tCanvas.width = topSection.offsetWidth;
+      tCanvas.height = topSection.offsetHeight;
+
+      // Init 200 horizontal lines
+      tLines = [];
+      for (var i = 0; i < 200; i++) {
+        tLines.push({
+          x: Math.random() * tCanvas.width,
+          y: Math.random() * tCanvas.height,
+          length: Math.random() * 200 + 50,
+          speed: Math.random() * 5 + 2,
+          thickness: Math.random() * 2 + 0.5,
+          opacity: Math.random() * 0.4 + 0.1
+        });
+      }
+    }
+
+    function updateTrafficState(appState) {
+      if (appState === 'boosted') {
+        targetSpeedMultiplier = 6.0;   // Fast motion
+      } else if (appState === 'peak') {
+        targetSpeedMultiplier = 0.5;   // Very slow
+      } else {
+        targetSpeedMultiplier = 1.0;   // Normal
+      }
+    }
+
+    function drawTraffic() {
+      // Respect reduced motion
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        tCtx.clearRect(0, 0, tCanvas.width, tCanvas.height);
+        return;
+      }
+
+      currentSpeedMultiplier += (targetSpeedMultiplier - currentSpeedMultiplier) * 0.05;
+
+      // Clear with slight trailing effect for motion blur
+      tCtx.fillStyle = 'rgba(238, 223, 204, 0.3)'; // Match var(--bg-light) exactly
+      tCtx.fillRect(0, 0, tCanvas.width, tCanvas.height);
+
+      for (var i = 0; i < tLines.length; i++) {
+        var line = tLines[i];
+        
+        // Move line rightwards
+        line.x += line.speed * currentSpeedMultiplier;
+
+        // Reset if it goes off screen
+        if (line.x > tCanvas.width) {
+          line.x = -line.length - 10;
+          line.y = Math.random() * tCanvas.height;
+        }
+
+        // Draw line
+        tCtx.beginPath();
+        tCtx.moveTo(line.x, line.y);
+        tCtx.lineTo(line.x + line.length, line.y);
+        tCtx.lineWidth = line.thickness;
+
+        // Base colour is brown, with tiny hints of green/red depending on the state
+        var styleColor = 'rgba(123, 92, 70, ' + line.opacity + ')';
+        if (prevState === 'boosted' && Math.random() > 0.8) {
+             styleColor = 'rgba(0, 150, 80, ' + line.opacity + ')';
+        } else if (prevState === 'peak' && Math.random() > 0.8) {
+             styleColor = 'rgba(200, 50, 50, ' + line.opacity + ')';
+        }
+
+        tCtx.strokeStyle = styleColor;
+        tCtx.stroke();
+      }
+
+      tRafId = requestAnimationFrame(drawTraffic);
+    }
+    initTraffic();
+    drawTraffic();
+
+    // ─────────────────────────────────────────────────────────────────────
     // INIT
     // ─────────────────────────────────────────────────────────────────────
 
@@ -880,13 +911,16 @@
       }
     });
 
-    // Resize confetti canvas (debounced)
+    // Resize confetti and traffic canvas (debounced)
     var resizeTimer = null;
     window.addEventListener('resize', function () {
       if (resizeTimer) clearTimeout(resizeTimer);
       resizeTimer = setTimeout(function () {
+        var topSect = document.querySelector('.top-section');
         $canvas.width = window.innerWidth;
         $canvas.height = window.innerHeight;
+        tCanvas.width = topSect.offsetWidth;
+        tCanvas.height = topSect.offsetHeight;
         resizeTimer = null;
       }, 150);
     });
