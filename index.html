@@ -3,11 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
   <title>Claude Throttle Tracker — Are your limits 2× right now?</title>
   <meta name="description" content="Live tracker for Anthropic's 2× usage limit boost outside peak hours. See if your Claude limits are doubled right now.">
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap');
 
+  <!-- Favicon: green lightning bolt SVG inline -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+
+  <!-- Fonts: preconnect + link (non-render-blocking with display=swap) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap">
+
+  <style>
     *, *::before, *::after {
       margin: 0;
       padding: 0;
@@ -31,6 +39,7 @@
       background: var(--bg);
       color: var(--fg);
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -64,7 +73,7 @@
       width: 100%;
     }
 
-    .title {
+    h1 {
       font-family: 'Space Mono', monospace;
       font-size: 1.1rem;
       font-weight: 400;
@@ -84,68 +93,62 @@
       letter-spacing: 0.08em;
       text-transform: uppercase;
       margin-bottom: 1.5rem;
-      transition: all 0.3s ease;
+      border: 1px solid transparent;
     }
 
-    .status-badge.boosted {
+    .status-badge[data-state="boosted"] {
       background: rgba(0, 255, 136, 0.1);
       color: var(--accent);
-      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-color: rgba(0, 255, 136, 0.3);
     }
 
-    .status-badge.peak {
+    .status-badge[data-state="peak"] {
       background: rgba(255, 107, 107, 0.1);
       color: var(--peak);
-      border: 1px solid rgba(255, 107, 107, 0.3);
+      border-color: rgba(255, 107, 107, 0.3);
     }
 
-    .status-badge.expired {
+    .status-badge[data-state="expired"],
+    .status-badge[data-state="not-started"] {
       background: rgba(102, 102, 102, 0.1);
       color: var(--muted);
-      border: 1px solid rgba(102, 102, 102, 0.3);
+      border-color: rgba(102, 102, 102, 0.3);
     }
 
     .hero-text {
       font-family: 'Space Mono', monospace;
       font-weight: 700;
-      font-size: clamp(1.8rem, 5vw, 3.2rem);
-      line-height: 1.2;
+      font-size: clamp(1.6rem, 5vw, 3rem);
+      line-height: 1.3;
       margin-bottom: 0.5rem;
-      transition: color 0.3s ease;
     }
 
-    .hero-text.boosted {
-      color: var(--accent);
-    }
-
-    .hero-text.peak {
-      color: var(--peak);
-    }
-
-    .hero-text.expired {
-      color: var(--muted);
-    }
+    .hero-text[data-state="boosted"] { color: var(--accent); }
+    .hero-text[data-state="peak"]    { color: var(--peak); }
+    .hero-text[data-state="expired"],
+    .hero-text[data-state="not-started"] { color: var(--muted); }
 
     .countdown {
       font-family: 'Space Mono', monospace;
       font-weight: 700;
-      font-size: clamp(2.8rem, 8vw, 5rem);
+      font-size: clamp(2.5rem, 8vw, 4.8rem);
       letter-spacing: 0.02em;
       margin: 0.5rem 0 1.5rem;
-      transition: color 0.3s ease;
+      min-height: 1.2em; /* prevent layout shift when empty */
     }
 
-    .countdown.boosted {
+    .countdown[data-state="boosted"] {
       color: var(--accent);
       text-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
     }
 
-    .countdown.peak {
+    .countdown[data-state="peak"] {
       color: var(--peak);
       text-shadow: 0 0 30px rgba(255, 107, 107, 0.3);
     }
 
-    .countdown.expired {
+    .countdown[data-state="expired"],
+    .countdown[data-state="not-started"] {
       color: var(--muted);
     }
 
@@ -162,6 +165,8 @@
       color: var(--fg);
       font-size: 0.85rem;
       opacity: 0.7;
+      display: block;
+      margin-top: 0.25rem;
     }
 
     /* Schedule card */
@@ -175,13 +180,14 @@
       text-align: left;
     }
 
-    .schedule-card h3 {
+    .schedule-card h2 {
       font-family: 'Space Mono', monospace;
       font-size: 0.8rem;
       text-transform: uppercase;
       letter-spacing: 0.1em;
       color: var(--muted);
       margin-bottom: 1rem;
+      font-weight: 400;
     }
 
     .schedule-row {
@@ -191,6 +197,7 @@
       padding: 0.5rem 0;
       border-bottom: 1px solid var(--border);
       font-size: 0.9rem;
+      gap: 1rem;
     }
 
     .schedule-row:last-child {
@@ -204,15 +211,11 @@
     .schedule-row .value {
       font-family: 'Space Mono', monospace;
       font-size: 0.85rem;
+      white-space: nowrap;
     }
 
-    .schedule-row .value.green {
-      color: var(--accent);
-    }
-
-    .schedule-row .value.red {
-      color: var(--peak);
-    }
+    .schedule-row .value.green { color: var(--accent); }
+    .schedule-row .value.red   { color: var(--peak); }
 
     /* Progress bar */
     .progress-wrap {
@@ -229,7 +232,7 @@
       font-family: 'Space Mono', monospace;
     }
 
-    .progress-bar {
+    .progress-bar-bg {
       width: 100%;
       height: 6px;
       background: var(--border);
@@ -241,16 +244,21 @@
       height: 100%;
       border-radius: 3px;
       transition: width 1s linear;
+      width: 0%;
     }
 
-    .progress-fill.boosted {
+    .progress-fill[data-state="boosted"] {
       background: var(--accent);
       box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
     }
 
-    .progress-fill.peak {
+    .progress-fill[data-state="peak"] {
       background: var(--peak);
       box-shadow: 0 0 10px rgba(255, 107, 107, 0.4);
+    }
+
+    .progress-fill[data-state="expired"] {
+      background: var(--muted);
     }
 
     /* Footer */
@@ -287,7 +295,7 @@
       z-index: 999;
     }
 
-    /* Pulse animation for active 2x */
+    /* Pulse animation for active 2x — respects reduced motion */
     @keyframes pulse-glow {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -297,13 +305,29 @@
       animation: pulse-glow 2s ease-in-out infinite;
     }
 
+    @media (prefers-reduced-motion: reduce) {
+      .pulse {
+        animation: none;
+      }
+      .progress-fill {
+        transition: none;
+      }
+    }
+
     /* Responsive tweaks */
     @media (max-width: 480px) {
+      body {
+        padding: 1rem;
+      }
       .schedule-card {
         padding: 1rem;
       }
       .schedule-row {
         font-size: 0.8rem;
+        flex-wrap: wrap;
+      }
+      footer {
+        font-size: 0.75rem;
       }
     }
   </style>
@@ -311,29 +335,29 @@
 <body>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
-  <main>
-    <div class="title">Claude Throttle Tracker</div>
+  <main role="main">
+    <h1>Claude Throttle Tracker</h1>
 
     <div id="status-badge" class="status-badge" role="status" aria-live="polite"></div>
 
-    <div id="hero" class="hero-text" aria-live="polite"></div>
+    <p id="hero" class="hero-text" aria-live="polite"></p>
 
-    <div id="countdown" class="countdown" aria-live="off"></div>
+    <p id="countdown" class="countdown" aria-live="off" aria-atomic="true"></p>
 
-    <div id="sub" class="sub-text"></div>
+    <p id="sub" class="sub-text"></p>
 
-    <div id="progress-section" class="progress-wrap">
+    <div class="progress-wrap" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Time remaining in current period" id="progress-section">
       <div class="progress-labels">
         <span id="prog-left"></span>
         <span id="prog-right"></span>
       </div>
-      <div class="progress-bar">
+      <div class="progress-bar-bg">
         <div id="prog-fill" class="progress-fill"></div>
       </div>
     </div>
 
-    <div class="schedule-card">
-      <h3>Schedule (Pacific Time)</h3>
+    <div class="schedule-card" aria-label="Boost schedule">
+      <h2>Schedule (Pacific Time)</h2>
       <div class="schedule-row">
         <span class="label">Weekdays 5 AM – 11 AM PT</span>
         <span class="value red">Peak (1×)</span>
@@ -354,277 +378,430 @@
   </main>
 
   <footer>
-    Built with ❤️ by Orcas | Follow
-    <a href="https://x.com/p_naix" target="_blank" rel="noopener">@p_naix</a>
-    <a href="https://x.com/get_orcas" target="_blank" rel="noopener">@get_orcas</a>
-    on 𝕏 |
-    <a href="https://getorcas.com" target="_blank" rel="noopener">getorcas.com</a>
+    Built with &#10084;&#65039; by Orcas | Follow
+    <a href="https://x.com/p_naix" target="_blank" rel="noopener noreferrer">@p_naix</a>
+    <a href="https://x.com/get_orcas" target="_blank" rel="noopener noreferrer">@get_orcas</a>
+    on &#120143; |
+    <a href="https://getorcas.com" target="_blank" rel="noopener noreferrer">getorcas.com</a>
   </footer>
 
   <script>
-    // ─── Constants ───────────────────────────────────────────────────────
-    const PT = 'America/Los_Angeles';
-    // Boost ends March 28, 2026 at 23:59:59.999 PT
-    const BOOST_END_PT = new Date('2026-03-29T06:59:59.999Z'); // 23:59:59.999 PT (PDT = UTC-7)
-    // Peak hours: weekdays 5:00 AM to 10:59:59.999 AM PT (peak ends at 11:00 AM)
-    const PEAK_START_HOUR = 5;
-    const PEAK_END_HOUR = 11;
+    'use strict';
 
-    // ─── Timezone helpers ────────────────────────────────────────────────
-    function getNowInPT() {
-      // Get current time expressed in PT components
-      const now = new Date();
-      const parts = new Intl.DateTimeFormat('en-US', {
-        timeZone: PT,
-        year: 'numeric', month: '2-digit', day: '2-digit',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: false,
-        weekday: 'short'
-      }).formatToParts(now);
+    // ─────────────────────────────────────────────────────────────────────
+    // CONSTANTS
+    // ─────────────────────────────────────────────────────────────────────
+    var PT_TZ = 'America/Los_Angeles';
+    var PEAK_START_HOUR = 5;   // 5:00 AM PT
+    var PEAK_END_HOUR   = 11;  // 11:00 AM PT (peak is 5:00–10:59:59.999)
 
-      const get = (type) => parts.find(p => p.type === type)?.value;
+    // Boost period: March 14, 2026 00:00:00 PT → March 28, 2026 23:59:59.999 PT
+    // Computed dynamically via ptToUTC (no hardcoded UTC offset).
+    // We defer initialization until ptToUTC is defined.
+    var BOOST_START;
+    var BOOST_END;
+
+    // Reusable Intl formatter — allocated once, used everywhere.
+    var ptFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: PT_TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      weekday: 'short'
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // TIMEZONE ENGINE
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Parse Intl.formatToParts output into a plain object.
+     * Uses the shared ptFormatter. Safe: only reads browser-provided values,
+     * never injects them into DOM via innerHTML.
+     */
+    function parsePTComponents(date) {
+      var parts = ptFormatter.formatToParts(date);
+      var map = {};
+      for (var i = 0; i < parts.length; i++) {
+        map[parts[i].type] = parts[i].value;
+      }
       return {
-        now,       // actual Date object (UTC)
-        year:    +get('year'),
-        month:   +get('month'),
-        day:     +get('day'),
-        hour:    +get('hour') % 24, // handle "24" -> 0
-        minute:  +get('minute'),
-        second:  +get('second'),
-        weekday: get('weekday')  // "Mon", "Tue", ..., "Sat", "Sun"
+        year:    +map.year,
+        month:   +map.month,
+        day:     +map.day,
+        hour:    (+map.hour) % 24,  // some engines return "24" for midnight
+        minute:  +map.minute,
+        second:  +map.second,
+        weekday: map.weekday         // "Mon", "Tue", … "Sat", "Sun"
       };
     }
+
+    /**
+     * Convert a Pacific Time wall-clock to a UTC Date.
+     *
+     * Strategy (no string parsing, no new Date(string)):
+     *   1. Treat the PT components as UTC → "guess"
+     *   2. Ask Intl what PT wall-clock corresponds to that guess
+     *   3. Compute offset = guess_as_utc − pt_components_as_utc
+     *   4. Result = guess + offset
+     *   5. Verify & correct for DST boundary (one extra iteration max)
+     */
+    function ptToUTC(year, month, day, hour, minute, second) {
+      // Step 1: treat target wall-clock as if it were UTC
+      var guess = Date.UTC(year, month - 1, day, hour, minute, second || 0);
+
+      // Step 2: what does a PT clock show at this UTC instant?
+      var ptAt = parsePTComponents(new Date(guess));
+      var ptAsUTC = Date.UTC(ptAt.year, ptAt.month - 1, ptAt.day, ptAt.hour, ptAt.minute, ptAt.second);
+
+      // Step 3: offset
+      var offset = guess - ptAsUTC;
+
+      // Step 4: candidate result
+      var result = guess + offset;
+
+      // Step 5: verify — at the candidate, does PT show our target?
+      var verify = parsePTComponents(new Date(result));
+      var verifyAsUTC = Date.UTC(verify.year, verify.month - 1, verify.day, verify.hour, verify.minute, verify.second);
+
+      if (verifyAsUTC !== guess) {
+        // DST boundary correction: recompute offset at the result timestamp
+        var offset2 = guess - verifyAsUTC;
+        result = guess + offset2;
+      }
+
+      return new Date(result);
+    }
+
+    /**
+     * Get the current time decomposed into PT components + the raw Date.
+     */
+    function getNowPT() {
+      var now = new Date();
+      var c = parsePTComponents(now);
+      c.now = now;
+      return c;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Initialize boost period boundaries (uses ptToUTC, so must come after)
+    // ─────────────────────────────────────────────────────────────────────
+    BOOST_START = ptToUTC(2026, 3, 14, 0, 0, 0);     // Mar 14 00:00:00 PT
+    BOOST_END   = ptToUTC(2026, 3, 29, 0, 0, 0);     // Mar 29 00:00:00 PT = Mar 28 23:59:59.999+1ms
+
+    // We actually want "end of March 28", so subtract 1ms
+    BOOST_END = new Date(BOOST_END.getTime() - 1);
+
+    // ─────────────────────────────────────────────────────────────────────
+    // STATE LOGIC
+    // ─────────────────────────────────────────────────────────────────────
 
     function isWeekend(weekday) {
       return weekday === 'Sat' || weekday === 'Sun';
     }
 
+    /**
+     * Determine if a given PT hour falls within peak (5:00 AM – 10:59:59 AM).
+     * Boundary: 5:00:00.000 AM = peak, 11:00:00.000 AM = NOT peak.
+     */
     function isPeakHour(hour) {
       return hour >= PEAK_START_HOUR && hour < PEAK_END_HOUR;
     }
 
-    // Build a Date object from PT components by figuring out the UTC offset
-    function ptToUTC(year, month, day, hour, minute, second) {
-      // Create a date string in PT and parse it
-      // We use a trick: format the target date in PT, then get the offset
-      const fakeDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-      // Get what PT thinks this UTC time is
-      const ptStr = fakeDate.toLocaleString('en-US', { timeZone: PT });
-      const ptDate = new Date(ptStr);
-      const diff = fakeDate.getTime() - ptDate.getTime();
-      return new Date(Date.UTC(year, month - 1, day, hour, minute, second) + diff);
+    /**
+     * Get the day-of-week (0=Sun, 6=Sat) for a PT date using only PT components.
+     * Avoids using local `new Date()` which could give wrong day for UTC+12/+14 users.
+     */
+    function ptDayOfWeek(year, month, day) {
+      // Zeller-like formula or just use Date.UTC which is timezone-independent
+      return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
     }
 
-    // ─── State calculation ───────────────────────────────────────────────
-    function getState() {
-      const pt = getNowInPT();
-      const now = pt.now;
-      const nowMs = now.getTime();
-      const endMs = BOOST_END_PT.getTime();
-
-      // If boost period has ended
-      if (nowMs >= endMs) {
-        return { state: 'expired', msUntilChange: 0, periodStartMs: nowMs, periodEndMs: nowMs };
-      }
-
-      const weekend = isWeekend(pt.weekday);
-      const peak = !weekend && isPeakHour(pt.hour);
-
-      if (peak) {
-        // Currently in peak. Find when peak ends: today at PEAK_END_HOUR:00 PT
-        const peakEnd = ptToUTC(pt.year, pt.month, pt.day, PEAK_END_HOUR, 0, 0);
-        const peakStart = ptToUTC(pt.year, pt.month, pt.day, PEAK_START_HOUR, 0, 0);
-        const target = Math.min(peakEnd.getTime(), endMs);
-        return {
-          state: 'peak',
-          msUntilChange: target - nowMs,
-          periodStartMs: peakStart.getTime(),
-          periodEndMs: target
-        };
-      } else {
-        // Currently boosted (2×). Find when the next peak starts.
-        // Next peak = next weekday at PEAK_START_HOUR PT
-        let nextPeak = findNextPeakStart(pt);
-        const target = Math.min(nextPeak, endMs);
-
-        // Find when this boost period started
-        let boostStart;
-        if (weekend) {
-          // On weekends, boost runs all day. Find start of Saturday
-          if (pt.weekday === 'Sat') {
-            boostStart = ptToUTC(pt.year, pt.month, pt.day, 0, 0, 0);
-          } else {
-            // Sunday — boost started Saturday 0:00 (or previous peak end if Fri)
-            // Actually for simplicity: boost started when peak ended Friday 11AM or Saturday 0:00
-            // Let's use the previous day (Saturday) midnight
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate()); // we're on Sunday, Sat = -1
-            // Just use current period start as Friday 11AM PT
-            boostStart = findPreviousPeakEnd(pt);
-          }
-        } else {
-          // Weekday, outside peak. Either before 5 AM or after 11 AM
-          if (pt.hour < PEAK_START_HOUR) {
-            // Before 5 AM — boost started at previous day's 11 AM if weekday, or start of weekend
-            boostStart = findPreviousPeakEnd(pt);
-          } else {
-            // After 11 AM — boost started at 11 AM today
-            boostStart = ptToUTC(pt.year, pt.month, pt.day, PEAK_END_HOUR, 0, 0);
-          }
-        }
-
-        return {
-          state: 'boosted',
-          msUntilChange: target - nowMs,
-          periodStartMs: boostStart ? boostStart.getTime() : nowMs,
-          periodEndMs: target
-        };
-      }
-    }
-
+    /**
+     * Find the UTC timestamp of the NEXT peak start (weekday at PEAK_START_HOUR PT)
+     * relative to the given PT components.
+     */
     function findNextPeakStart(pt) {
-      // Walk forward from current PT date to find next weekday at PEAK_START_HOUR
-      let d = new Date(pt.year, pt.month - 1, pt.day);
-      const ptHour = pt.hour;
-
-      // If we're on a weekday and before peak start, next peak is today
-      const todayWeekday = d.getDay(); // 0=Sun, 6=Sat
-      if (todayWeekday >= 1 && todayWeekday <= 5 && ptHour < PEAK_START_HOUR) {
+      // If today is a weekday and we haven't reached peak yet, peak is today
+      var dow = ptDayOfWeek(pt.year, pt.month, pt.day);
+      if (dow >= 1 && dow <= 5 && pt.hour < PEAK_START_HOUR) {
         return ptToUTC(pt.year, pt.month, pt.day, PEAK_START_HOUR, 0, 0).getTime();
       }
 
-      // Otherwise advance to next day
-      for (let i = 1; i <= 7; i++) {
-        const next = new Date(pt.year, pt.month - 1, pt.day + i);
-        const dow = next.getDay();
-        if (dow >= 1 && dow <= 5) {
-          return ptToUTC(next.getFullYear(), next.getMonth() + 1, next.getDate(), PEAK_START_HOUR, 0, 0).getTime();
+      // Walk forward up to 7 days to find next weekday
+      for (var i = 1; i <= 7; i++) {
+        // Use Date.UTC to safely add days without local TZ interference
+        var future = new Date(Date.UTC(pt.year, pt.month - 1, pt.day + i));
+        var fDow = future.getUTCDay();
+        if (fDow >= 1 && fDow <= 5) {
+          return ptToUTC(
+            future.getUTCFullYear(),
+            future.getUTCMonth() + 1,
+            future.getUTCDate(),
+            PEAK_START_HOUR, 0, 0
+          ).getTime();
         }
       }
-      // Fallback (shouldn't reach)
-      return BOOST_END_PT.getTime();
+      // Should never reach here, but safety fallback
+      return BOOST_END.getTime();
     }
 
+    /**
+     * Find the most recent peak end (weekday at PEAK_END_HOUR PT) at or before now.
+     * Used to compute when the current boost period started.
+     */
     function findPreviousPeakEnd(pt) {
-      // Walk backward to find the most recent peak end (weekday at 11 AM PT)
-      for (let i = 0; i <= 7; i++) {
-        const d = new Date(pt.year, pt.month - 1, pt.day - i);
-        const dow = d.getDay();
+      for (var i = 0; i <= 7; i++) {
+        var past = new Date(Date.UTC(pt.year, pt.month - 1, pt.day - i));
+        var dow = past.getUTCDay();
         if (dow >= 1 && dow <= 5) {
-          const peakEnd = ptToUTC(d.getFullYear(), d.getMonth() + 1, d.getDate(), PEAK_END_HOUR, 0, 0);
+          var peakEnd = ptToUTC(
+            past.getUTCFullYear(),
+            past.getUTCMonth() + 1,
+            past.getUTCDate(),
+            PEAK_END_HOUR, 0, 0
+          );
           if (peakEnd.getTime() <= pt.now.getTime()) {
             return peakEnd;
           }
         }
       }
-      return null;
+      // Fallback: boost start
+      return BOOST_START;
     }
 
-    // ─── Formatting ──────────────────────────────────────────────────────
+    /**
+     * Core state calculation.
+     * Returns: { state, msUntilChange, periodStartMs, periodEndMs }
+     *
+     * States: "not-started" | "boosted" | "peak" | "expired"
+     */
+    function getState() {
+      var pt = getNowPT();
+      var nowMs = pt.now.getTime();
+      var startMs = BOOST_START.getTime();
+      var endMs = BOOST_END.getTime();
+
+      // Before boost period
+      if (nowMs < startMs) {
+        return {
+          state: 'not-started',
+          msUntilChange: startMs - nowMs,
+          periodStartMs: nowMs,
+          periodEndMs: startMs
+        };
+      }
+
+      // After boost period
+      if (nowMs >= endMs) {
+        return {
+          state: 'expired',
+          msUntilChange: 0,
+          periodStartMs: nowMs,
+          periodEndMs: nowMs
+        };
+      }
+
+      var weekend = isWeekend(pt.weekday);
+      var peak = !weekend && isPeakHour(pt.hour);
+
+      if (peak) {
+        // Currently in peak window
+        var peakStart = ptToUTC(pt.year, pt.month, pt.day, PEAK_START_HOUR, 0, 0);
+        var peakEnd   = ptToUTC(pt.year, pt.month, pt.day, PEAK_END_HOUR, 0, 0);
+        var target    = Math.min(peakEnd.getTime(), endMs);
+        return {
+          state: 'peak',
+          msUntilChange: Math.max(0, target - nowMs),
+          periodStartMs: peakStart.getTime(),
+          periodEndMs: target
+        };
+      }
+
+      // Currently boosted (2×)
+      var nextPeak = findNextPeakStart(pt);
+      var boostTarget = Math.min(nextPeak, endMs);
+
+      // When did this boost period start?
+      var boostStart;
+      if (weekend || pt.hour < PEAK_START_HOUR) {
+        // Weekend all day or weekday before 5 AM: started at last peak end
+        boostStart = findPreviousPeakEnd(pt);
+      } else {
+        // Weekday after 11 AM: started at 11 AM today
+        boostStart = ptToUTC(pt.year, pt.month, pt.day, PEAK_END_HOUR, 0, 0);
+      }
+
+      return {
+        state: 'boosted',
+        msUntilChange: Math.max(0, boostTarget - nowMs),
+        periodStartMs: boostStart.getTime(),
+        periodEndMs: boostTarget
+      };
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // FORMATTING
+    // ─────────────────────────────────────────────────────────────────────
+
     function formatCountdown(ms) {
-      if (ms <= 0) return '0h 0m 0s';
-      const totalSec = Math.floor(ms / 1000);
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      return `${h}h ${m}m ${s}s`;
+      if (!isFinite(ms) || ms <= 0) return '0h 0m 0s';
+      var totalSec = Math.floor(ms / 1000);
+      var h = Math.floor(totalSec / 3600);
+      var m = Math.floor((totalSec % 3600) / 60);
+      var s = totalSec % 60;
+      return h + 'h ' + m + 'm ' + s + 's';
     }
 
     function getUserTimezone() {
       try {
         return Intl.DateTimeFormat().resolvedOptions().timeZone;
-      } catch {
+      } catch (e) {
         return 'Unknown';
       }
     }
 
-    // ─── DOM refs ────────────────────────────────────────────────────────
-    const $badge = document.getElementById('status-badge');
-    const $hero = document.getElementById('hero');
-    const $countdown = document.getElementById('countdown');
-    const $sub = document.getElementById('sub');
-    const $progFill = document.getElementById('prog-fill');
-    const $progLeft = document.getElementById('prog-left');
-    const $progRight = document.getElementById('prog-right');
+    // ─────────────────────────────────────────────────────────────────────
+    // DOM — all references cached, all writes via textContent (no innerHTML)
+    // ─────────────────────────────────────────────────────────────────────
+    var $badge    = document.getElementById('status-badge');
+    var $hero     = document.getElementById('hero');
+    var $countdown = document.getElementById('countdown');
+    var $sub      = document.getElementById('sub');
+    var $progWrap = document.getElementById('progress-section');
+    var $progFill = document.getElementById('prog-fill');
+    var $progLeft = document.getElementById('prog-left');
+    var $progRight = document.getElementById('prog-right');
+    var $canvas   = document.getElementById('confetti');
 
-    const userTZ = getUserTimezone();
+    var userTZ = getUserTimezone();
 
-    // ─── Render ──────────────────────────────────────────────────────────
+    // Build sub-text safely (no innerHTML with user data)
+    function setSubText(message) {
+      // Clear existing children
+      while ($sub.firstChild) $sub.removeChild($sub.firstChild);
+      $sub.appendChild(document.createTextNode(message));
+      var tz = document.createElement('span');
+      tz.className = 'tz';
+      tz.textContent = userTZ;
+      $sub.appendChild(tz);
+    }
+
+    // Apply data-state attribute to multiple elements
+    function setStateAttr(state) {
+      var els = [$badge, $hero, $countdown, $progFill];
+      for (var i = 0; i < els.length; i++) {
+        els[i].setAttribute('data-state', state);
+      }
+    }
+
+    // Track previous state for transitions
+    var prevState = null;
+
     function render() {
-      const { state, msUntilChange, periodStartMs, periodEndMs } = getState();
+      var result = getState();
+      var state = result.state;
+      var msUntilChange = result.msUntilChange;
+      var periodStartMs = result.periodStartMs;
+      var periodEndMs = result.periodEndMs;
 
-      // Remove old classes
-      const states = ['boosted', 'peak', 'expired'];
-      states.forEach(s => {
-        $badge.classList.remove(s);
-        $hero.classList.remove(s);
-        $countdown.classList.remove(s);
-        $progFill.classList.remove(s);
-      });
+      setStateAttr(state);
+
+      if (state === 'not-started') {
+        $badge.textContent = 'COMING SOON';
+        $hero.textContent = 'The 2× boost starts in';
+        $countdown.textContent = formatCountdown(msUntilChange);
+        $countdown.classList.remove('pulse');
+        setSubText('2× usage limits begin March 14, 2026 \u00b7 ');
+        $progLeft.textContent = '';
+        $progRight.textContent = 'Starting soon';
+        $progFill.style.width = '0%';
+        $progWrap.setAttribute('aria-valuenow', '0');
+        return;
+      }
 
       if (state === 'expired') {
         $badge.textContent = 'ENDED';
-        $badge.classList.add('expired');
-        $hero.textContent = 'The 2× boost period has ended';
-        $hero.classList.add('expired');
+        $hero.textContent = 'The 2\u00d7 boost period has ended';
         $countdown.textContent = '';
-        $countdown.classList.add('expired');
-        $sub.innerHTML = `The promotional 2× usage limits ended on March 28, 2026.<br><span class="tz">${userTZ}</span>`;
+        $countdown.classList.remove('pulse');
+        setSubText('The promotional 2\u00d7 usage limits ended on March 28, 2026. ');
         $progFill.style.width = '100%';
-        $progFill.classList.add('expired');
         $progLeft.textContent = '';
         $progRight.textContent = 'Ended';
+        $progWrap.setAttribute('aria-valuenow', '100');
         return;
       }
 
       if (state === 'boosted') {
-        $badge.textContent = '2× ACTIVE';
-        $badge.classList.add('boosted');
-        $hero.textContent = '2× maxxing in';
-        $hero.classList.add('boosted');
+        $badge.textContent = '2\u00d7 ACTIVE';
+        $hero.textContent = '2\u00d7 maxxing for';
         $countdown.textContent = formatCountdown(msUntilChange);
-        $countdown.classList.add('boosted');
         $countdown.classList.add('pulse');
-        $sub.innerHTML = `Your usage limits are doubled right now<br><span class="tz">${userTZ}</span>`;
-        $progFill.classList.add('boosted');
-        $progLeft.textContent = '2× ACTIVE';
+        setSubText('Your usage limits are doubled right now \u00b7 ');
+        $progLeft.textContent = '2\u00d7 ACTIVE';
         $progRight.textContent = 'Next peak';
       } else {
+        // peak
         $badge.textContent = 'PEAK HOURS';
-        $badge.classList.add('peak');
-        $hero.textContent = 'Peak throttling — 2× resumes in';
-        $hero.classList.add('peak');
+        $hero.textContent = 'Peak throttling \u2014 2\u00d7 resumes in';
         $countdown.textContent = formatCountdown(msUntilChange);
-        $countdown.classList.add('peak');
         $countdown.classList.remove('pulse');
-        $sub.innerHTML = `Standard usage limits during peak hours<br><span class="tz">${userTZ}</span>`;
-        $progFill.classList.add('peak');
+        setSubText('Standard usage limits during peak hours \u00b7 ');
         $progLeft.textContent = 'Peak hours';
-        $progRight.textContent = '2× resumes';
+        $progRight.textContent = '2\u00d7 resumes';
       }
 
       // Progress bar
-      const now = Date.now();
-      const elapsed = now - periodStartMs;
-      const total = periodEndMs - periodStartMs;
-      const pct = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
-      $progFill.style.width = pct + '%';
+      var now = Date.now();
+      var elapsed = now - periodStartMs;
+      var total = periodEndMs - periodStartMs;
+      var pct = total > 0 ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
+      $progFill.style.width = pct.toFixed(1) + '%';
+      $progWrap.setAttribute('aria-valuenow', Math.round(pct).toString());
+
+      // Launch confetti on state transition to boosted
+      if (state === 'boosted' && prevState !== 'boosted') {
+        launchConfetti();
+      }
+      prevState = state;
     }
 
-    // ─── Mini confetti on load if boosted ────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // CONFETTI — self-cleaning, respects prefers-reduced-motion
+    // ─────────────────────────────────────────────────────────────────────
+    var confettiRafId = null;
+
     function launchConfetti() {
-      const canvas = document.getElementById('confetti');
-      const ctx = canvas.getContext('2d');
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      // Respect reduced motion preference
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+      }
 
-      const particles = [];
-      const colors = ['#00ff88', '#00cc6a', '#88ffbb', '#ffffff', '#00ffcc'];
+      // Cancel any in-progress confetti
+      if (confettiRafId) {
+        cancelAnimationFrame(confettiRafId);
+        confettiRafId = null;
+      }
 
-      for (let i = 0; i < 80; i++) {
+      var ctx = $canvas.getContext('2d');
+      if (!ctx) return;
+
+      $canvas.width = window.innerWidth;
+      $canvas.height = window.innerHeight;
+
+      var particles = [];
+      var colors = ['#00ff88', '#00cc6a', '#88ffbb', '#ffffff', '#00ffcc'];
+      var count = Math.min(80, Math.floor(window.innerWidth / 8)); // fewer on small screens
+
+      for (var i = 0; i < count; i++) {
         particles.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height - canvas.height,
+          x: Math.random() * $canvas.width,
+          y: Math.random() * $canvas.height - $canvas.height,
           w: Math.random() * 8 + 4,
           h: Math.random() * 6 + 2,
           color: colors[Math.floor(Math.random() * colors.length)],
@@ -636,18 +813,20 @@
         });
       }
 
-      let frame = 0;
-      function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        let alive = false;
+      var frame = 0;
 
-        particles.forEach(p => {
+      function animate() {
+        ctx.clearRect(0, 0, $canvas.width, $canvas.height);
+        var alive = false;
+
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
           p.y += p.speed;
           p.x += p.wobble * Math.sin(frame * 0.05);
           p.rotation += p.rotSpeed;
 
           if (frame > 60) p.opacity -= 0.01;
-          if (p.opacity <= 0) return;
+          if (p.opacity <= 0) continue;
 
           alive = true;
           ctx.save();
@@ -657,35 +836,59 @@
           ctx.fillStyle = p.color;
           ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
           ctx.restore();
-        });
+        }
 
         frame++;
         if (alive) {
-          requestAnimationFrame(animate);
+          confettiRafId = requestAnimationFrame(animate);
         } else {
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.clearRect(0, 0, $canvas.width, $canvas.height);
+          confettiRafId = null;
         }
       }
-      animate();
+
+      confettiRafId = requestAnimationFrame(animate);
     }
 
-    // ─── Init ────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Initial render
+    prevState = getState().state;
     render();
 
-    // Launch confetti if currently boosted
-    const initState = getState();
-    if (initState.state === 'boosted') {
+    // Launch confetti on first load if boosted
+    if (prevState === 'boosted') {
       launchConfetti();
     }
 
-    // Update every second
-    setInterval(render, 1000);
+    // Tick every second — single interval, no leaks (page-level lifecycle)
+    var tickInterval = setInterval(render, 1000);
 
-    // Handle window resize for confetti canvas
-    window.addEventListener('resize', () => {
-      const canvas = document.getElementById('confetti');
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+    // Pause ticking when page is hidden (saves CPU, prevents stale countdowns)
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) {
+        clearInterval(tickInterval);
+        tickInterval = null;
+      } else {
+        // Immediately re-render on return (catch up after sleep/tab switch)
+        render();
+        if (!tickInterval) {
+          tickInterval = setInterval(render, 1000);
+        }
+      }
+    });
+
+    // Resize confetti canvas (debounced)
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        $canvas.width = window.innerWidth;
+        $canvas.height = window.innerHeight;
+        resizeTimer = null;
+      }, 150);
     });
   </script>
 </body>
